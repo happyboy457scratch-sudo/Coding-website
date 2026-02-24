@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Work.py Editor</title>
+    <style>
+      :root {
+        --bg: #000000;
+        --panel: #0a0a0a;
+        --panel-2: #111111;
+        --line: #2c2c2c;
+        --text: #d9d9d9;
+        --muted: #9aa19f;
+        --mint: #1f6f57;
+        --mint-hover: #29886b;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 14px;
+        padding: 18px;
+        min-height: 100vh;
+      }
+
+      .left-col {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .pill,
+      .btn,
+      select,
+      input,
+      .action-btn {
+        border: 1px solid #2c5d4c;
+        border-radius: 999px;
+        background: var(--mint);
+        color: #e8fff6;
+        font-size: 0.86rem;
+        padding: 8px 14px;
+      }
+
+      .pill {
+        width: fit-content;
+        font-weight: 600;
+      }
+
+      .toolbox {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .btn,
+      .action-btn {
+        cursor: pointer;
+        transition: 0.2s ease;
+      }
+
+      .btn:hover,
+      .action-btn:hover,
+      .top-row button:hover {
+        background: var(--mint-hover);
+      }
+
+      .credits {
+        margin-top: auto;
+      }
+
+      .main-col {
+        display: grid;
+        grid-template-rows: auto auto 1fr 180px;
+        gap: 12px;
+      }
+
+      .top-row,
+      .editor-actions,
+      .auth-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .top-row {
+        justify-content: space-between;
+      }
+
+      .brand {
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        padding: 8px 16px;
+        background: var(--panel);
+        font-weight: 700;
+      }
+
+      .top-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .time-chip {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        padding: 8px 14px;
+      }
+
+      .top-row button,
+      .editor-actions button,
+      .editor-actions select,
+      .editor-actions input {
+        background: var(--mint);
+        color: #e8fff6;
+        border: 1px solid #2c5d4c;
+        border-radius: 999px;
+        padding: 9px 14px;
+      }
+
+      .editor-actions input {
+        border-radius: 12px;
+        min-width: 220px;
+      }
+
+      .editor-shell,
+      .terminal-shell {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-2);
+        overflow: hidden;
+      }
+
+      .editor-label,
+      .terminal-label {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .editor {
+        width: 100%;
+        height: 100%;
+        min-height: 360px;
+        padding: 14px;
+        border: 0;
+        outline: none;
+        resize: none;
+        background: #050505;
+        color: #e3e3e3;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+
+      .terminal {
+        margin: 0;
+        padding: 12px;
+        height: 100%;
+        background: #050505;
+        color: #bfc9c3;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        white-space: pre-wrap;
+      }
+
+      dialog {
+        width: min(540px, 92vw);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #0b0b0b;
+        color: var(--text);
+        padding: 16px;
+      }
+
+      dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+
+      .drop-zone {
+        margin-top: 12px;
+        border: 1px dashed #4e7d6e;
+        border-radius: 12px;
+        padding: 28px;
+        text-align: center;
+        background: #0f1a16;
+      }
+
+      .drop-zone.dragover { border-color: #79c8a8; background: #133025; }
+
+      .modal-actions {
+        display: flex;
+        justify-content: end;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .action-menu {
+        position: relative;
+      }
+
+      .action-list {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        min-width: 180px;
+        background: #101010;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px;
+        display: none;
+        z-index: 20;
+      }
+
+      .action-list.open { display: block; }
+
+      .action-list button {
+        width: 100%;
+        text-align: left;
+        margin: 4px 0;
+      }
+
+      @media (max-width: 900px) {
+        .app { grid-template-columns: 1fr; }
+        .left-col { flex-direction: row; flex-wrap: wrap; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="left-col">
+        <span class="pill">Layout</span>
+        <div class="toolbox">
+          <button class="btn lang-quick" data-lang="python">Python</button>
+          <button class="btn lang-quick" data-lang="javascript">JavaScript</button>
+          <button class="btn lang-quick" data-lang="html">HTML</button>
+          <button class="btn lang-quick" data-lang="text">etc.</button>
+        </div>
+        <button class="btn credits" id="creditsBtn">Add AI for 10 credits free</button>
+      </aside>
+
+      <main class="main-col">
+        <div class="top-row">
+          <div class="brand">Work.py</div>
+          <div class="top-right">
+            <div class="time-chip" id="creditMeter">100.00 left</div>
+            <div class="auth-row">
+              <button type="button">Log In</button>
+              <button type="button">Sign Up</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-actions">
+          <input id="fileName" value="work" aria-label="File name" />
+          <select id="fileType" aria-label="File type">
+            <option value="python">Python (.py)</option>
+            <option value="javascript">JavaScript (.js)</option>
+            <option value="html">HTML (.html)</option>
+            <option value="css">CSS (.css)</option>
+            <option value="text">Text (.txt)</option>
+          </select>
+          <button id="downloadBtn">Download</button>
+          <button id="uploadBtn">Upload</button>
+          <div class="action-menu">
+            <button id="aiBtn" class="action-btn">AI ▼</button>
+            <div class="action-list" id="aiMenu">
+              <button data-ai-action="deploy">Deploy my code</button>
+              <button data-ai-action="explain">Explain this code</button>
+            </div>
+          </div>
+        </div>
+
+        <section class="editor-shell">
+          <div class="editor-label">Code here!</div>
+          <textarea class="editor" id="editor">print("Hello from Work.py")</textarea>
+        </section>
+
+        <section class="terminal-shell">
+          <div class="terminal-label">terminal output</div>
+          <pre class="terminal" id="terminal">outputs will be seen here!</pre>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="uploadDialog">
+      <h3>Upload a file</h3>
+      <p>Drop a file below or browse your computer.</p>
+      <div class="drop-zone" id="dropZone">Drop file here</div>
+      <input id="fileInput" type="file" hidden />
+      <div class="modal-actions">
+        <button id="browseBtn">Browse files</button>
+        <button id="closeUploadBtn">Close</button>
+      </div>
+    </dialog>
+
+    <script>
+      const editor = document.getElementById('editor');
+      const terminal = document.getElementById('terminal');
+      const fileType = document.getElementById('fileType');
+      const fileName = document.getElementById('fileName');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const uploadDialog = document.getElementById('uploadDialog');
+      const closeUploadBtn = document.getElementById('closeUploadBtn');
+      const browseBtn = document.getElementById('browseBtn');
+      const fileInput = document.getElementById('fileInput');
+      const dropZone = document.getElementById('dropZone');
+      const aiBtn = document.getElementById('aiBtn');
+      const aiMenu = document.getElementById('aiMenu');
+      const creditMeter = document.getElementById('creditMeter');
+      let credits = 100;
+
+      const extMap = { python: 'py', javascript: 'js', html: 'html', css: 'css', text: 'txt' };
+
+      function updateTerminal(message) {
+        terminal.textContent = message;
+      }
+
+      function updateCredits(amount) {
+        credits = Math.max(0, credits - amount);
+        creditMeter.textContent = `${credits.toFixed(2)} left`;
+      }
+
+      document.querySelectorAll('.lang-quick').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          fileType.value = btn.dataset.lang;
+          updateTerminal(`Language set to ${btn.dataset.lang}.`);
+        });
+      });
+
+      downloadBtn.addEventListener('click', () => {
+        const selected = fileType.value;
+        const ext = extMap[selected] || 'txt';
+        const safeName = (fileName.value || 'work').replace(/\s+/g, '_');
+        const blob = new Blob([editor.value], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeName}.${ext}`;
+        a.click();
+        URL.revokeObjectURL(url);
+        updateTerminal(`Downloaded ${safeName}.${ext}`);
+      });
+
+      uploadBtn.addEventListener('click', () => uploadDialog.showModal());
+      closeUploadBtn.addEventListener('click', () => uploadDialog.close());
+      browseBtn.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        handleFile(file);
+      });
+
+      function handleFile(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          editor.value = reader.result || '';
+          fileName.value = file.name.replace(/\.[^/.]+$/, '');
+          updateTerminal(`Uploaded ${file.name}`);
+          uploadDialog.close();
+        };
+        reader.readAsText(file);
+      }
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const file = e.dataTransfer.files?.[0];
+        if (file) handleFile(file);
+      });
+
+      aiBtn.addEventListener('click', () => aiMenu.classList.toggle('open'));
+
+      aiMenu.addEventListener('click', (e) => {
+        const target = e.target.closest('button[data-ai-action]');
+        if (!target) return;
+        const action = target.dataset.aiAction;
+        updateCredits(1);
+        if (action === 'deploy') {
+          updateTerminal('AI: Deployment checklist generated for your current code.');
+        } else {
+          updateTerminal('AI: Code explanation generated in plain language.');
+        }
+        aiMenu.classList.remove('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.action-menu')) aiMenu.classList.remove('open');
+      });
+
+      document.getElementById('creditsBtn').addEventListener('click', () => {
+        credits += 10;
+        creditMeter.textContent = `${credits.toFixed(2)} left`;
+        updateTerminal('Added 10 AI credits.');
+      });
+    </script>
+  </body>
+</html>

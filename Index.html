@@ -16,7 +16,9 @@
         --mint-hover: #29886b;
       }
 
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
 
       body {
         margin: 0;
@@ -188,7 +190,9 @@
         padding: 16px;
       }
 
-      dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.72);
+      }
 
       .drop-zone {
         margin-top: 12px;
@@ -199,7 +203,10 @@
         background: #0f1a16;
       }
 
-      .drop-zone.dragover { border-color: #79c8a8; background: #133025; }
+      .drop-zone.dragover {
+        border-color: #79c8a8;
+        background: #133025;
+      }
 
       .modal-actions {
         display: flex;
@@ -225,7 +232,9 @@
         z-index: 20;
       }
 
-      .action-list.open { display: block; }
+      .action-list.open {
+        display: block;
+      }
 
       .action-list button {
         width: 100%;
@@ -234,8 +243,14 @@
       }
 
       @media (max-width: 900px) {
-        .app { grid-template-columns: 1fr; }
-        .left-col { flex-direction: row; flex-wrap: wrap; }
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .left-col {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
       }
     </style>
   </head>
@@ -244,12 +259,12 @@
       <aside class="left-col">
         <span class="pill">Layout</span>
         <div class="toolbox">
-          <button class="btn lang-quick" data-lang="python">Python</button>
-          <button class="btn lang-quick" data-lang="javascript">JavaScript</button>
-          <button class="btn lang-quick" data-lang="html">HTML</button>
-          <button class="btn lang-quick" data-lang="text">etc.</button>
+          <button class="btn lang-quick" data-lang="python" type="button">Python</button>
+          <button class="btn lang-quick" data-lang="javascript" type="button">JavaScript</button>
+          <button class="btn lang-quick" data-lang="html" type="button">HTML</button>
+          <button class="btn lang-quick" data-lang="text" type="button">etc.</button>
         </div>
-        <button class="btn credits" id="creditsBtn">Add AI for 10 credits free</button>
+        <button class="btn credits" id="creditsBtn" type="button">Add AI for 10 credits free</button>
       </aside>
 
       <main class="main-col">
@@ -273,13 +288,13 @@
             <option value="css">CSS (.css)</option>
             <option value="text">Text (.txt)</option>
           </select>
-          <button id="downloadBtn">Download</button>
-          <button id="uploadBtn">Upload</button>
+          <button id="downloadBtn" type="button">Download</button>
+          <button id="uploadBtn" type="button">Upload</button>
           <div class="action-menu">
-            <button id="aiBtn" class="action-btn">AI ▼</button>
+            <button id="aiBtn" class="action-btn" type="button">AI ▼</button>
             <div class="action-list" id="aiMenu">
-              <button data-ai-action="deploy">Deploy my code</button>
-              <button data-ai-action="explain">Explain this code</button>
+              <button data-ai-action="deploy" type="button">Deploy my code</button>
+              <button data-ai-action="explain" type="button">Explain this code</button>
             </div>
           </div>
         </div>
@@ -302,8 +317,8 @@
       <div class="drop-zone" id="dropZone">Drop file here</div>
       <input id="fileInput" type="file" hidden />
       <div class="modal-actions">
-        <button id="browseBtn">Browse files</button>
-        <button id="closeUploadBtn">Close</button>
+        <button id="browseBtn" type="button">Browse files</button>
+        <button id="closeUploadBtn" type="button">Close</button>
       </div>
     </dialog>
 
@@ -322,17 +337,45 @@
       const aiBtn = document.getElementById('aiBtn');
       const aiMenu = document.getElementById('aiMenu');
       const creditMeter = document.getElementById('creditMeter');
+      const creditsBtn = document.getElementById('creditsBtn');
+
       let credits = 100;
 
       const extMap = { python: 'py', javascript: 'js', html: 'html', css: 'css', text: 'txt' };
+      const langMap = { py: 'python', js: 'javascript', html: 'html', css: 'css', txt: 'text' };
 
       function updateTerminal(message) {
         terminal.textContent = message;
       }
 
-      function updateCredits(amount) {
-        credits = Math.max(0, credits - amount);
+      function renderCredits() {
         creditMeter.textContent = `${credits.toFixed(2)} left`;
+      }
+
+      function spendCredits(amount) {
+        if (credits < amount) {
+          updateTerminal('Not enough AI credits. Click "Add AI for 10 credits free" to continue.');
+          return false;
+        }
+        credits -= amount;
+        renderCredits();
+        return true;
+      }
+
+      function openUploadDialog() {
+        if (typeof uploadDialog.showModal === 'function') {
+          uploadDialog.showModal();
+          return;
+        }
+        uploadDialog.setAttribute('open', 'open');
+      }
+
+      function closeUploadDialog() {
+        if (typeof uploadDialog.close === 'function') {
+          uploadDialog.close();
+          return;
+        }
+        uploadDialog.removeAttribute('open');
       }
 
       document.querySelectorAll('.lang-quick').forEach((btn) => {
@@ -345,59 +388,78 @@
       downloadBtn.addEventListener('click', () => {
         const selected = fileType.value;
         const ext = extMap[selected] || 'txt';
-        const safeName = (fileName.value || 'work').replace(/\s+/g, '_');
-        const blob = new Blob([editor.value], { type: 'text/plain' });
+        const safeName = (fileName.value || 'work').trim().replace(/\s+/g, '_').replace(/[\\/:*?"<>|]/g, '') || 'work';
+        const blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `${safeName}.${ext}`;
+        document.body.appendChild(a);
         a.click();
+        a.remove();
         URL.revokeObjectURL(url);
         updateTerminal(`Downloaded ${safeName}.${ext}`);
       });
 
-      uploadBtn.addEventListener('click', () => uploadDialog.showModal());
-      closeUploadBtn.addEventListener('click', () => uploadDialog.close());
+      uploadBtn.addEventListener('click', openUploadDialog);
+      closeUploadBtn.addEventListener('click', closeUploadDialog);
       browseBtn.addEventListener('click', () => fileInput.click());
 
       fileInput.addEventListener('change', (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          return;
+        }
         handleFile(file);
+        fileInput.value = '';
       });
 
       function handleFile(file) {
         const reader = new FileReader();
         reader.onload = () => {
-          editor.value = reader.result || '';
+          editor.value = String(reader.result || '');
           fileName.value = file.name.replace(/\.[^/.]+$/, '');
+          const extension = (file.name.split('.').pop() || '').toLowerCase();
+          if (langMap[extension]) {
+            fileType.value = langMap[extension];
+          }
           updateTerminal(`Uploaded ${file.name}`);
-          uploadDialog.close();
+          closeUploadDialog();
+        };
+        reader.onerror = () => {
+          updateTerminal(`Could not read ${file.name}. Please try again.`);
         };
         reader.readAsText(file);
       }
 
-      dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
+      dropZone.addEventListener('dragover', (event) => {
+        event.preventDefault();
         dropZone.classList.add('dragover');
       });
 
       dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 
-      dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
+      dropZone.addEventListener('drop', (event) => {
+        event.preventDefault();
         dropZone.classList.remove('dragover');
-        const file = e.dataTransfer.files?.[0];
-        if (file) handleFile(file);
+        const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+        if (file) {
+          handleFile(file);
+        }
       });
 
       aiBtn.addEventListener('click', () => aiMenu.classList.toggle('open'));
 
-      aiMenu.addEventListener('click', (e) => {
-        const target = e.target.closest('button[data-ai-action]');
-        if (!target) return;
+      aiMenu.addEventListener('click', (event) => {
+        const target = event.target.closest('button[data-ai-action]');
+        if (!target) {
+          return;
+        }
+        if (!spendCredits(1)) {
+          aiMenu.classList.remove('open');
+          return;
+        }
         const action = target.dataset.aiAction;
-        updateCredits(1);
         if (action === 'deploy') {
           updateTerminal('AI: Deployment checklist generated for your current code.');
         } else {
@@ -406,13 +468,15 @@
         aiMenu.classList.remove('open');
       });
 
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('.action-menu')) aiMenu.classList.remove('open');
+      document.addEventListener('click', (event) => {
+        if (!event.target.closest('.action-menu')) {
+          aiMenu.classList.remove('open');
+        }
       });
 
-      document.getElementById('creditsBtn').addEventListener('click', () => {
+      creditsBtn.addEventListener('click', () => {
         credits += 10;
-        creditMeter.textContent = `${credits.toFixed(2)} left`;
+        renderCredits();
         updateTerminal('Added 10 AI credits.');
       });
     </script>

@@ -1,37 +1,97 @@
+
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07080a" />
     <title>Codex Black Editor</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
+
   <body>
     <!-- Guest sign-in prompt -->
-    <div id="signinPrompt" class="overlay" role="dialog" aria-modal="true" aria-labelledby="promptTitle">
+    <div
+      id="signinPrompt"
+      class="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="promptTitle"
+    >
       <div class="panel">
-        <button id="closePromptBtn" class="close" type="button" aria-label="Close sign in prompt">✕</button>
+
+        <!-- Close popup button -->
+        <button
+          id="closePromptBtn"
+          class="close"
+          type="button"
+          aria-label="Close sign in prompt"
+          onclick="document.getElementById('signinPrompt').classList.add('hidden')"
+        >
+          ✕
+        </button>
+
         <h2 id="promptTitle">Sign in to unlock full access</h2>
-        <p>Guests can use the editor for 10 minutes. AI tools require signing in.</p>
-        <button id="openLoginBtn" class="mint-btn" type="button">Sign in / Create account</button>
+
+        <p>
+          Guests can use the editor for 10 minutes.
+          AI tools require signing in.
+        </p>
+
+        <button
+          id="openLoginBtn"
+          class="mint-btn"
+          type="button"
+        >
+          Sign in / Create account
+        </button>
+
       </div>
     </div>
 
+    <!-- Main application -->
     <div class="app">
+
+      <!-- Top bar -->
       <header class="topbar">
-        <h1>Work.py</h1>
+        <h1 class="logo">Work.py</h1>
+
         <div class="status-row">
           <span id="sessionStatus">Guest mode</span>
-          <span id="usageStatus">Guest time left: 10:00</span>
-          <span id="creditStatus">AI credits: 0</span>
-          <button id="loginBtn" class="mint-btn" type="button">Login</button>
-          <button id="logoutBtn" class="mint-btn hidden" type="button">Logout</button>
+
+          <span id="usageStatus">
+            Guest time left: 10:00
+          </span>
+
+          <span id="creditStatus">
+            AI credits: 0
+          </span>
+
+          <button
+            id="loginBtn"
+            class="mint-btn"
+            type="button"
+          >
+            Login
+          </button>
+
+          <button
+            id="logoutBtn"
+            class="mint-btn hidden"
+            type="button"
+          >
+            Logout
+          </button>
         </div>
       </header>
 
+      <!-- Main layout -->
       <main class="layout">
+
+        <!-- Editor controls -->
         <section class="controls">
-          <select id="languageSelect" aria-label="language">
+
+          <select id="languageSelect" aria-label="Language">
             <option value="javascript">JavaScript</option>
             <option value="python">Python</option>
             <option value="typescript">TypeScript</option>
@@ -49,38 +109,110 @@
             <option value="bash">Bash</option>
             <option value="text">Plain Text</option>
           </select>
-          <input id="fileName" value="main" aria-label="file name" />
-          <select id="fileExt" aria-label="file format"></select>
-          <button id="runBtn" class="mint-btn" type="button">Run</button>
-          <button id="downloadBtn" class="mint-btn" type="button">Download</button>
-          <button id="uploadBtn" class="mint-btn" type="button">Upload</button>
-          <input id="uploadInput" type="file" hidden />
+
+          <input
+            id="fileName"
+            type="text"
+            value="main"
+            aria-label="File name"
+          />
+
+          <select
+            id="fileExt"
+            aria-label="File format"
+          ></select>
+
+          <button
+            id="runBtn"
+            class="mint-btn"
+            type="button"
+          >
+            Run
+          </button>
+
+          <button
+            id="downloadBtn"
+            class="mint-btn"
+            type="button"
+          >
+            Download
+          </button>
+
+          <button
+            id="uploadBtn"
+            class="mint-btn"
+            type="button"
+          >
+            Upload
+          </button>
+
+          <input
+            id="uploadInput"
+            type="file"
+            hidden
+          />
+
         </section>
 
+        <!-- Code editor -->
         <section class="editor-area">
-          <h3>Code Editor</h3>
-          <textarea id="editor" spellcheck="false"></textarea>
+          <h3 class="panel-title">Code Editor</h3>
+
+          <textarea
+            id="editor"
+            spellcheck="false"
+            aria-label="Code editor"
+          ></textarea>
         </section>
 
+        <!-- Terminal -->
         <section class="terminal-area">
-          <h3>Built-in Terminal</h3>
+          <h3 class="panel-title">Built-in Terminal</h3>
+
           <pre id="terminal">Terminal ready.</pre>
         </section>
 
+        <!-- AI helper -->
         <section class="ai-area">
-          <h3>AI Bug Helper</h3>
+          <h3 class="panel-title">AI Bug Helper</h3>
+
           <p>AI is available only for signed-in users.</p>
-          <textarea id="aiPrompt" placeholder="Ask AI to fix a bug..."></textarea>
+
+          <textarea
+            id="aiPrompt"
+            placeholder="Ask AI to fix a bug..."
+            aria-label="AI prompt"
+          ></textarea>
+
           <div class="ai-actions">
-            <button id="askAiBtn" class="mint-btn" type="button">Ask AI</button>
-            <button id="fixAiBtn" class="mint-btn" type="button">Auto-fix code</button>
+
+            <button
+              id="askAiBtn"
+              class="mint-btn"
+              type="button"
+            >
+              Ask AI
+            </button>
+
+            <button
+              id="fixAiBtn"
+              class="mint-btn"
+              type="button"
+            >
+              Auto-fix code
+            </button>
+
           </div>
         </section>
+
       </main>
     </div>
 
     <!-- Auth0 SPA SDK -->
     <script src="https://cdn.auth0.com/js/auth0-spa-js/2.18/auth0-spa-js.production.js"></script>
+
+    <!-- Application JavaScript -->
     <script src="app.js" defer></script>
+
   </body>
 </html>

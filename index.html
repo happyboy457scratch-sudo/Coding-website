@@ -7,32 +7,13 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!-- Guest sign-in prompt -->
     <div id="signinPrompt" class="overlay" role="dialog" aria-modal="true" aria-labelledby="promptTitle">
       <div class="panel">
         <button id="closePromptBtn" class="close" type="button" aria-label="Close sign in prompt">✕</button>
         <h2 id="promptTitle">Sign in to unlock full access</h2>
         <p>Guests can use the editor for 10 minutes. AI tools require signing in.</p>
         <button id="openLoginBtn" class="mint-btn" type="button">Sign in / Create account</button>
-      </div>
-    </div>
-
-    <div id="authModal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-      <div class="panel auth-panel">
-        <button id="closeAuthBtn" class="close" type="button" aria-label="Close login">✕</button>
-        <h2 id="authTitle">Login System (Local Demo)</h2>
-        <form id="authForm">
-          <label>Email</label>
-          <input id="emailInput" required type="email" placeholder="you@example.com" />
-          <label>Password</label>
-          <input id="passwordInput" required type="password" minlength="4" placeholder="••••" />
-          <label>Plan</label>
-          <select id="planSelect">
-            <option value="free">Free (7 AI credits/month)</option>
-            <option value="premium">Premium $3.99 — Not available yet</option>
-            <option value="ultimate">Premium Ultimate $7.99 — Not available yet</option>
-          </select>
-          <button class="mint-btn" type="submit">Sign in</button>
-        </form>
       </div>
     </div>
 
@@ -98,6 +79,8 @@
       </main>
     </div>
 
+    <!-- Auth0 SPA SDK -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.18/auth0-spa-js.production.js"></script>
     <script src="app.js" defer></script>
   </body>
 </html>

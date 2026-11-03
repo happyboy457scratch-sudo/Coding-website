@@ -315,4 +315,10 @@ body {
   .ai-area {
     min-height: 220px;
   }
+  
+/* Hide elements when signed in */
+.hidden {
+  display: none !important;
+}
+
 }

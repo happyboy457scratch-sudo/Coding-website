@@ -1,3 +1,4 @@
+
 :root {
   --bg: #07080a;
   --bg-elevated: #0d0f12;
@@ -10,7 +11,11 @@
   --mint-glow: rgba(45, 212, 168, 0.12);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   background: var(--bg);
@@ -311,14 +316,14 @@ body {
   .layout {
     grid-template-columns: 1fr;
   }
+
   .terminal-area,
   .ai-area {
     min-height: 220px;
   }
-  
+}
+
 /* Hide elements when signed in */
 .hidden {
   display: none !important;
-}
-
 }

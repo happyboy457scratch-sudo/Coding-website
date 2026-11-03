@@ -1,10 +1,10 @@
+
 // ====================== CONFIG ======================
 const AUTH0_DOMAIN = 'dev-1kote2b2378g5pt1.us.auth0.com';
 const AUTH0_CLIENT_ID = 'U6xekUwmIHa3B7reoViRre1W2uGYWsZF';
 
-// ←←← PUT YOUR GROK API KEY HERE
-const GROK_API_KEY = 'xai-your-key-here';   // ← replace this
-const GROK_MODEL = 'grok-4.7';              // or grok-4.6, etc.
+// Groq API credentials are stored securely in Cloudflare.
+// Never put your Groq API key in this file.
 
 // ====================== STATE ======================
 const state = {
@@ -94,32 +94,26 @@ function blockIfExpired() {
   return false;
 }
 
-// ====================== GROK API ======================
+// ====================== CLOUDFLARE / GROQ API ======================
 async function callGrok(messages) {
-  if (!GROK_API_KEY || GROK_API_KEY.includes('your-key')) {
-    throw new Error('Please add your Grok API key in app.js');
-  }
-
-  const res = await fetch('https://api.x.ai/v1/chat/completions', {
+  const res = await fetch('/api/chat', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROK_API_KEY}`
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: GROK_MODEL,
-      messages: messages,
+      messages,
       temperature: 0.3
     })
   });
 
+  const data = await res.json().catch(() => ({}));
+
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Grok API error ${res.status}: ${err}`);
+    throw new Error(data.error || `Cloudflare API error ${res.status}`);
   }
 
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || 'No response from Grok';
+  return data.reply || 'No response from Groq';
 }
 
 // ====================== EDITOR ACTIONS ======================
@@ -150,7 +144,7 @@ async function aiAsk() {
   const userPrompt = document.getElementById('aiPrompt').value.trim() || 'Find bugs and suggest improvements';
   const code = editor.value;
 
-  writeTerminal('Asking Grok...');
+  writeTerminal('Asking Groq...');
 
   try {
     if (state.aiCredits !== Infinity) state.aiCredits--;
@@ -170,7 +164,7 @@ async function aiAsk() {
     syncUi();
   } catch (err) {
     console.error(err);
-    writeTerminal('Grok error: ' + err.message);
+    writeTerminal('Groq error: ' + err.message);
   }
 }
 
@@ -182,7 +176,7 @@ async function aiAutoFix() {
   }
 
   const code = editor.value;
-  writeTerminal('Grok is fixing your code...');
+  writeTerminal('Groq is fixing your code...');
 
   try {
     if (state.aiCredits !== Infinity) state.aiCredits--;
@@ -198,18 +192,17 @@ async function aiAutoFix() {
       }
     ]);
 
-    // Clean possible markdown if Grok still adds it
     let fixed = reply.trim();
     if (fixed.startsWith('```')) {
       fixed = fixed.replace(/^```[a-z]*\n?/i, '').replace(/```$/, '').trim();
     }
 
     editor.value = fixed;
-    writeTerminal('AI auto-fix applied by Grok. Review the changes.');
+    writeTerminal('AI auto-fix applied by Groq. Review the changes.');
     syncUi();
   } catch (err) {
     console.error(err);
-    writeTerminal('Grok error: ' + err.message);
+    writeTerminal('Groq error: ' + err.message);
   }
 }
 
@@ -219,6 +212,7 @@ async function loginWithAuth0() {
     writeTerminal('Auth0 is still loading...');
     return;
   }
+
   try {
     await auth0Client.loginWithRedirect({
       authorizationParams: { redirect_uri: getRedirectUri() }
@@ -302,6 +296,7 @@ syncUi();
       signinPrompt.classList.add('hidden');
       editor.disabled = false;
     }
+
     syncUi();
   } catch (err) {
     console.error(err);

@@ -13,6 +13,12 @@ const AUTH0_DOMAIN = 'dev-1kote2b2378g5pt1.us.auth0.com';
 const AUTH0_CLIENT_ID = 'U6xekUwmIHa3B7reoViRre1W2uGYWsZF';
 let auth0Client = null;
 
+// Helper to get a consistent redirect URI (handles trailing slash)
+function getRedirectUri() {
+  const path = window.location.pathname.replace(/\/$/, '');
+  return window.location.origin + path + '/';
+}
+
 // ====================== DOM ELEMENTS ======================
 const editor = document.getElementById('editor');
 const terminal = document.getElementById('terminal');
@@ -150,12 +156,12 @@ function aiAutoFix() {
   syncUi();
 }
 
-// ====================== AUTH0 FUNCTIONS ======================
+// ====================== AUTH0 LOGIN / LOGOUT ======================
 async function loginWithAuth0() {
   try {
     await auth0Client.loginWithRedirect({
       authorizationParams: {
-        redirect_uri: window.location.origin + window.location.pathname
+        redirect_uri: getRedirectUri()
       }
     });
   } catch (err) {
@@ -168,7 +174,7 @@ async function logout() {
   try {
     await auth0Client.logout({
       logoutParams: {
-        returnTo: window.location.origin + window.location.pathname
+        returnTo: getRedirectUri()
       }
     });
   } catch (err) {
@@ -237,34 +243,44 @@ editor.value = `print("Hello, world")\n# Use language selector for different for
 refreshFileExtOptions();
 syncUi();
 
-// Auth0 initialization
+// ====================== AUTH0 INITIALIZATION ======================
 (async function initAuth0() {
   try {
     auth0Client = await auth0.createAuth0Client({
       domain: AUTH0_DOMAIN,
       clientId: AUTH0_CLIENT_ID,
       authorizationParams: {
-        redirect_uri: window.location.origin + window.location.pathname
+        redirect_uri: getRedirectUri()
       },
-      cacheLocation: 'localstorage'
+      cacheLocation: 'localstorage',
+      useRefreshTokens: true
     });
 
-    // Handle redirect callback after login
+    // Handle the redirect callback from Auth0
     if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
-      await auth0Client.handleRedirectCallback();
-      window.history.replaceState({}, document.title, window.location.pathname);
+      try {
+        await auth0Client.handleRedirectCallback();
+        // Clean the URL so the code/state parameters disappear
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (err) {
+        console.error('handleRedirectCallback error:', err);
+      }
     }
 
     const isAuthenticated = await auth0Client.isAuthenticated();
+    console.log('Auth0 isAuthenticated:', isAuthenticated);
 
     if (isAuthenticated) {
       const user = await auth0Client.getUser();
+      console.log('Logged in as:', user);
+
       state.signedIn = true;
       state.email = user.email || user.name || 'User';
       state.plan = 'free';
       state.aiCredits = 7;
       state.usageMsLeftToday = 5 * 60 * 60 * 1000;
 
+      // Hide the popup
       signinPrompt.classList.add('hidden');
       editor.disabled = false;
     }
@@ -272,6 +288,6 @@ syncUi();
     syncUi();
   } catch (err) {
     console.error('Auth0 init error:', err);
-    writeTerminal('Auth0 failed to initialize. Check the browser console.');
+    writeTerminal('Auth0 failed to initialize. Open the browser console (F12) for details.');
   }
 })();

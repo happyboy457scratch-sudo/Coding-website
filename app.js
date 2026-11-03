@@ -1,3 +1,4 @@
+// ====================== STATE ======================
 const state = {
   signedIn: false,
   email: '',
@@ -7,12 +8,12 @@ const state = {
   usageMsLeftToday: null,
 };
 
-const langExt = {
-  javascript: 'js', python: 'py', typescript: 'ts', html: 'html', css: 'css',
-  java: 'java', cpp: 'cpp', c: 'c', go: 'go', rust: 'rs', php: 'php', ruby: 'rb',
-  swift: 'swift', kotlin: 'kt', bash: 'sh', text: 'txt',
-};
+// ====================== AUTH0 CONFIG ======================
+const AUTH0_DOMAIN = 'dev-1kote2b2378g5pt1.us.auth0.com';
+const AUTH0_CLIENT_ID = 'U6xekUwmIHa3B7reoViRre1W2uGYWsZF';
+let auth0Client = null;
 
+// ====================== DOM ELEMENTS ======================
 const editor = document.getElementById('editor');
 const terminal = document.getElementById('terminal');
 const languageSelect = document.getElementById('languageSelect');
@@ -20,14 +21,23 @@ const fileName = document.getElementById('fileName');
 const fileExt = document.getElementById('fileExt');
 const uploadInput = document.getElementById('uploadInput');
 const signinPrompt = document.getElementById('signinPrompt');
-const authModal = document.getElementById('authModal');
 const sessionStatus = document.getElementById('sessionStatus');
 const usageStatus = document.getElementById('usageStatus');
 const creditStatus = document.getElementById('creditStatus');
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 
-function writeTerminal(msg) { terminal.textContent = msg; }
+const langExt = {
+  javascript: 'js', python: 'py', typescript: 'ts', html: 'html', css: 'css',
+  java: 'java', cpp: 'cpp', c: 'c', go: 'go', rust: 'rs', php: 'php', ruby: 'rb',
+  swift: 'swift', kotlin: 'kt', bash: 'sh', text: 'txt',
+};
+
+// ====================== HELPERS ======================
+function writeTerminal(msg) {
+  terminal.textContent = msg;
+}
+
 function formatMs(ms) {
   const total = Math.max(0, Math.floor(ms / 1000));
   const m = String(Math.floor(total / 60)).padStart(2, '0');
@@ -46,7 +56,10 @@ function refreshFileExtOptions() {
 }
 
 function syncUi() {
-  sessionStatus.textContent = state.signedIn ? `Signed in: ${state.email} (${state.plan})` : 'Guest mode';
+  sessionStatus.textContent = state.signedIn
+    ? `Signed in: ${state.email} (${state.plan})`
+    : 'Guest mode';
+
   creditStatus.textContent = `AI credits: ${state.aiCredits === Infinity ? '∞' : state.aiCredits}`;
 
   if (!state.signedIn) {
@@ -64,41 +77,22 @@ function syncUi() {
   if (state.plan === 'ultimate') usageStatus.textContent = 'Premium Ultimate: Infinite usage';
 }
 
-function canUseEditor() {
-  if (state.signedIn) return true;
-  return state.guestMsLeft > 0;
-}
-
 function blockIfExpired() {
-  if (canUseEditor()) return false;
-  editor.disabled = true;
-  writeTerminal('Guest time expired. Please sign in to continue.');
-  return true;
+  if (!state.signedIn && state.guestMsLeft <= 0) {
+    editor.disabled = true;
+    writeTerminal('Guest time expired. Please sign in to continue.');
+    signinPrompt.classList.remove('hidden');
+    return true;
+  }
+  return false;
 }
 
+// ====================== EDITOR ACTIONS ======================
 function runCode() {
   if (blockIfExpired()) return;
-  const lang = languageSelect.value;
   const code = editor.value;
-
-  if (!code.trim()) return writeTerminal('No code to run.');
-
-  if (lang === 'javascript') {
-    try {
-      const result = Function('"use strict";\n' + code)();
-      writeTerminal(result === undefined ? 'JS executed successfully (no return).' : String(result));
-    } catch (err) {
-      writeTerminal(`JavaScript error: ${err instanceof Error ? err.message : String(err)}`);
-    }
-    return;
-  }
-
-  if (lang === 'html') {
-    writeTerminal('HTML can be tested by downloading and opening in browser.');
-    return;
-  }
-
-  writeTerminal(`Language set to ${lang}. Terminal simulation available; full runtime requires backend containers.`);
+  const lang = languageSelect.value;
+  writeTerminal(`Running ${lang} code...\n\n${code.slice(0, 300)}${code.length > 300 ? '...' : ''}\n\n(Simulation only – full runtime needs a backend)`);
 }
 
 function downloadCode() {
@@ -144,7 +138,10 @@ function aiAutoFix() {
   if (!spendAiCredit()) return writeTerminal('No AI credits left this month.');
 
   const oldCode = editor.value;
-  let newCode = oldCode.replace(/pritn\(/g, 'print(').replace(/consol\.log/g, 'console.log');
+  let newCode = oldCode
+    .replace(/pritn\(/g, 'print(')
+    .replace(/consol\.log/g, 'console.log');
+
   if (newCode === oldCode) {
     newCode = `${oldCode}\n\n// AI note: no obvious typo found; consider adding input validation and error handling.`;
   }
@@ -153,31 +150,33 @@ function aiAutoFix() {
   syncUi();
 }
 
-function signIn(email, planRequested) {
-  if (planRequested === 'premium' || planRequested === 'ultimate') {
-    writeTerminal('Premium and Premium Ultimate are not available yet. Signed in on Free plan.');
+// ====================== AUTH0 FUNCTIONS ======================
+async function loginWithAuth0() {
+  try {
+    await auth0Client.loginWithRedirect({
+      authorizationParams: {
+        redirect_uri: window.location.origin + window.location.pathname
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    writeTerminal('Login failed. See console for details.');
   }
-
-  state.signedIn = true;
-  state.email = email;
-  state.plan = 'free';
-  state.aiCredits = 7;
-  state.usageMsLeftToday = 5 * 60 * 60 * 1000;
-
-  signinPrompt.classList.add('hidden');
-  authModal.classList.add('hidden');
-  editor.disabled = false;
-  syncUi();
 }
 
-function signOut() {
-  state.signedIn = false;
-  state.email = '';
-  state.plan = 'guest';
-  state.aiCredits = 0;
-  syncUi();
+async function logout() {
+  try {
+    await auth0Client.logout({
+      logoutParams: {
+        returnTo: window.location.origin + window.location.pathname
+      }
+    });
+  } catch (err) {
+    console.error(err);
+  }
 }
 
+// ====================== TIMER ======================
 setInterval(() => {
   if (!state.signedIn && state.guestMsLeft > 0) {
     state.guestMsLeft -= 1000;
@@ -199,24 +198,19 @@ setInterval(() => {
   syncUi();
 }, 1000);
 
+// ====================== EVENT LISTENERS ======================
 document.getElementById('runBtn').addEventListener('click', runCode);
 document.getElementById('downloadBtn').addEventListener('click', downloadCode);
 document.getElementById('uploadBtn').addEventListener('click', () => uploadInput.click());
 document.getElementById('askAiBtn').addEventListener('click', aiAsk);
 document.getElementById('fixAiBtn').addEventListener('click', aiAutoFix);
 
-document.getElementById('closePromptBtn').addEventListener('click', () => signinPrompt.classList.add('hidden'));
-document.getElementById('openLoginBtn').addEventListener('click', () => authModal.classList.remove('hidden'));
-document.getElementById('loginBtn').addEventListener('click', () => authModal.classList.remove('hidden'));
-document.getElementById('closeAuthBtn').addEventListener('click', () => authModal.classList.add('hidden'));
-document.getElementById('logoutBtn').addEventListener('click', signOut);
-
-document.getElementById('authForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const email = document.getElementById('emailInput').value.trim();
-  const plan = document.getElementById('planSelect').value;
-  signIn(email, plan);
+document.getElementById('closePromptBtn').addEventListener('click', () => {
+  signinPrompt.classList.add('hidden');
 });
+document.getElementById('openLoginBtn').addEventListener('click', loginWithAuth0);
+document.getElementById('loginBtn').addEventListener('click', loginWithAuth0);
+document.getElementById('logoutBtn').addEventListener('click', logout);
 
 languageSelect.addEventListener('change', refreshFileExtOptions);
 
@@ -238,6 +232,46 @@ uploadInput.addEventListener('change', (e) => {
   uploadInput.value = '';
 });
 
+// ====================== INIT ======================
 editor.value = `print("Hello, world")\n# Use language selector for different formats.`;
 refreshFileExtOptions();
 syncUi();
+
+// Auth0 initialization
+(async function initAuth0() {
+  try {
+    auth0Client = await auth0.createAuth0Client({
+      domain: AUTH0_DOMAIN,
+      clientId: AUTH0_CLIENT_ID,
+      authorizationParams: {
+        redirect_uri: window.location.origin + window.location.pathname
+      },
+      cacheLocation: 'localstorage'
+    });
+
+    // Handle redirect callback after login
+    if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
+      await auth0Client.handleRedirectCallback();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const isAuthenticated = await auth0Client.isAuthenticated();
+
+    if (isAuthenticated) {
+      const user = await auth0Client.getUser();
+      state.signedIn = true;
+      state.email = user.email || user.name || 'User';
+      state.plan = 'free';
+      state.aiCredits = 7;
+      state.usageMsLeftToday = 5 * 60 * 60 * 1000;
+
+      signinPrompt.classList.add('hidden');
+      editor.disabled = false;
+    }
+
+    syncUi();
+  } catch (err) {
+    console.error('Auth0 init error:', err);
+    writeTerminal('Auth0 failed to initialize. Check the browser console.');
+  }
+})();
